@@ -36,8 +36,6 @@ import gensim
 nltk.download('stopwords')
 nltk.download('punkt_tab')
 
-
-#create a list with not so important words
 from nltk.corpus import stopwords, words
 
 stop_words = stopwords.words('english')
@@ -71,8 +69,6 @@ for i in df.clean:
 #obtain total number of unique words
 total_words = len(set(list_of_words))
 #print(total_words)
-
-## QUESTION:de ce am mai multe cuvinte decat cele din curs?
 
 #create a new column with a massive string of all the cleaned words
 df['clean_joined'] = df['clean'].apply(lambda x: ' '.join(x))
@@ -111,46 +107,39 @@ fig = px.histogram(x = [len(nltk.word_tokenize(i)) for i in df.clean_joined ], n
 fig.show()
 
 import tensorflow as tf
-#TOKENIZARE
+#TOKENIZE
 from sklearn.model_selection import train_test_split
 #80% data is for training, 20% is for testing
 
 x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.isFake, test_size = 0.2)
 
 from nltk import word_tokenize
-# Incearca sa limitezi numarul de cuvinte la 10.000 (sau altă valoare rezonabilă)
-# Dimensiunea vocabularului este acum limitată
 tokenizer = tf.keras.preprocessing.text.Tokenizer(num_words=10000)
 tokenizer.fit_on_texts(x_train)
 train_sequences = tokenizer.texts_to_sequences(x_train)
 test_sequences = tokenizer.texts_to_sequences(x_test)
 
-# Padding secvențelor pentru a le uniformiza
+#Sequence Padding
 maxlen = 40
 padded_train = tf.keras.preprocessing.sequence.pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
 padded_test = tf.keras.preprocessing.sequence.pad_sequences(test_sequences, maxlen=maxlen, truncating='post')
 
-# Definirea modelului
-# Define the model
+#Define the model
 model = tf.keras.models.Sequential()
 
-# Add Embedding layer
+#Add embedding layer
 model.add(tf.keras.layers.Embedding(input_dim=10000, output_dim=128))
 
-# Add Bidirectional LSTM layer
+#Add bidirectional LSTM layer
 model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128)))
 
-# Add Dense layers
+#Add dense layers
 model.add(tf.keras.layers.Dense(128, activation='relu'))
 model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
 
-# Compile the model
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-# Now, model.build() will force the model to initialize correctly based on the input dimensions
 model.build(input_shape=(None, 40))  # 40 is the length of the padded sequences
-
-# Summary of the model
 model.summary()
 
 y_train = np.asarray(y_train)
@@ -178,26 +167,19 @@ plt.show()
 
 ###test
 print("Testareea unei stiri")
-# Textul știrii
 news_text = "New York prosecutors have vowed to oppose President-elect Donald Trump’s effort to overturn his criminal conviction, but they expressed a willingness to wait to sentence him until he completes his upcoming presidential term. Prosecutors urged the judge who is overseeing Trump's sentence after his guilty verdict to consider options other than dismissal, including holding off until the president-elect is scheduled to leave the White House in 2029. The Manhattan district attorney's office asked Justice Juan Merchan to set a new deadline of 9 December for both sides to consider the case and file new motions.Trump's sentencing is scheduled for 26 November, but it could be delayed further."
-# Aplica preprocesarea
+
 clean_news = preprocess(news_text)
-
-# Transformă textul curățat într-o singură secvență de cuvinte
 clean_news_joined = ' '.join(clean_news)
-
-# Tokenizare
 news_sequence = tokenizer.texts_to_sequences([clean_news_joined])
-
-# Padding
 padded_news = tf.keras.preprocessing.sequence.pad_sequences(news_sequence, maxlen=40, padding='post', truncating='post')
 
-# Predicția
+#prediction
 pred = model.predict(padded_news)
 
-# Verifică dacă predicția este mai mare de 0.5 pentru a o considera "falsă"
+#
 if pred[0].item() > 0.5:
-    print("Știrea este probabil falsă.")
+    print("Fake news")
 else:
-    print("Știrea este probabil reală.")
+    print("Real news")
 
